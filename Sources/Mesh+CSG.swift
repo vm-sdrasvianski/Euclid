@@ -113,7 +113,7 @@ public extension Mesh {
     ///   - mesh: The mesh to subtract from this one.
     ///   - isCancelled: Callback used to cancel the operation.
     /// - Returns: A new mesh representing the result of the subtraction.
-    func subtract(_ mesh: Mesh, isCancelled: CancellationHandler = { false }) -> Mesh {
+    func subtract(_ mesh: Mesh, fillTheCut: Bool = true, isCancelled: CancellationHandler = { false }) -> Mesh {
         let intersection = bounds.intersection(mesh.bounds)
         guard !intersection.isEmpty else {
             return self
@@ -124,18 +124,29 @@ public extension Mesh {
             .greaterThan,
             isCancelled
         )
-        let bp = BSP(self, isCancelled).clip(
-            boundsTest(intersection, mesh.polygons, &bout),
-            .lessThan,
-            isCancelled
-        )
-        return Mesh(
-            unchecked: aout! + ap + bp.map { $0.inverted() },
-            bounds: nil, // TODO: is there a way to preserve this efficiently?
-            isConvex: false,
-            isWatertight: nil,
-            submeshes: nil // TODO: can this be preserved?
-        )
+        
+        if fillTheCut {
+            let bp = BSP(self, isCancelled).clip(
+                boundsTest(intersection, mesh.polygons, &bout),
+                .lessThan,
+                isCancelled
+            )
+            return Mesh(
+                unchecked: aout! + ap + bp.map { $0.inverted() },
+                bounds: nil, // TODO: is there a way to preserve this efficiently?
+                isConvex: false,
+                isWatertight: nil,
+                submeshes: nil // TODO: can this be preserved?
+            )
+        } else {
+            return Mesh(
+                unchecked: aout! + ap,
+                bounds: nil, // TODO: is there a way to preserve this efficiently?
+                isConvex: false,
+                isWatertight: nil,
+                submeshes: nil // TODO: can this be preserved?
+            )
+        }
     }
 
     /// Efficiently gets the difference between multiple meshes.
